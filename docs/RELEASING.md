@@ -4,15 +4,21 @@ Quick guide for releasing a new version of beads.
 
 ## 🚀 The Easy Way (Recommended)
 
-Use the fully automated release script:
+Use the beads-release formula for guided, gate-aware releases:
 
 ```bash
-./scripts/release.sh 0.9.3
+bd mol wisp beads-release --var version=0.47.0
 ```
 
-This does **everything**: version bump, tests, git tag, Homebrew update, and local installation.
+The formula guides you through all steps:
+- Preflight checks and CHANGELOG updates
+- Version bumps across all components
+- Git commit, tag, and push
+- CI gate (waits for GitHub Actions)
+- Verification (GitHub, npm, PyPI)
+- Local installation update
 
-See [scripts/README.md](../scripts/README.md#releasesh--the-easy-button) for details.
+See `.beads/formulas/beads-release.formula.toml` for the full workflow.
 
 ---
 
@@ -68,12 +74,13 @@ If you prefer step-by-step control:
 
 ## Version Bump
 
-Use the automated script to update all version files:
+For quick local-only version bumps (not full releases):
 
 ```bash
-./scripts/bump-version.sh 0.9.X --commit
-git push origin main
+./scripts/update-versions.sh 0.47.0
 ```
+
+For full releases, use the formula instead (see above).
 
 This updates:
 - `cmd/bd/version.go`

@@ -80,8 +80,8 @@ go test -coverprofile=coverage.out ./...
 # Run linter (baseline warnings documented in docs/LINTING.md)
 golangci-lint run ./...
 
-# Version management
-./scripts/bump-version.sh 0.9.3 --commit
+# Version management (use formula for full releases)
+bd mol wisp beads-release --var version=0.47.0
 
 # Local testing
 ./bd init --prefix test

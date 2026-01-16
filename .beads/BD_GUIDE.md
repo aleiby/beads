@@ -256,9 +256,9 @@ Use the beads MCP server for native function calls instead of shell commands:
 - Functions: `mcp__beads__ready()`, `mcp__beads__create()`, etc.
 - See `integrations/beads-mcp/README.md`
 
-### Scripts
-- `./scripts/bump-version.sh <version> --commit` - Update all version files atomically
-- `./scripts/release.sh <version>` - Complete release workflow
+### Releases
+- `bd mol wisp beads-release --var version=X.Y.Z` - Full release workflow (recommended)
+- `./scripts/update-versions.sh <version>` - Quick local-only version bump
 - `./scripts/update-homebrew.sh <version>` - Update Homebrew formula
 
 ### Key Documentation

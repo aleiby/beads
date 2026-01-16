@@ -18,6 +18,15 @@ This document describes the complete release process for beads, including GitHub
 
 ## Overview
 
+> **Recommended:** Use the beads-release formula for guided releases:
+> ```bash
+> bd mol wisp beads-release --var version=0.47.0
+> ```
+> The formula provides step-by-step guidance, CI gates, and verification.
+> See `.beads/formulas/beads-release.formula.toml` for details.
+>
+> The manual process below is preserved as reference.
+
 A beads release involves multiple distribution channels:
 
 1. **GitHub Release** - Binary downloads for all platforms

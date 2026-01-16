@@ -346,75 +346,59 @@ go tool cover -html=coverage.out
 ./bd ready
 ```
 
-## Version Management
+## Version Management & Releases
 
-**IMPORTANT**: When the user asks to "bump the version" or mentions a new version number (e.g., "bump to 0.9.3"), use the version bump script:
+**IMPORTANT**: When the user asks to "bump the version", cut a release, or mentions a version number (e.g., "release 0.47.0"), use the **beads-release formula**:
 
 ```bash
-# Preview changes (shows diff, doesn't commit)
-./scripts/bump-version.sh 0.9.3
-
-# Auto-commit the version bump
-./scripts/bump-version.sh 0.9.3 --commit
-git push origin main
+# Full release workflow (recommended)
+bd mol wisp beads-release --var version=0.47.0
 ```
 
-**What it does:**
+The formula guides you through all steps:
+1. Preflight checks (clean git, up to date)
+2. CHANGELOG and info.go updates
+3. Version bumps across all components
+4. Git commit, tag, and push
+5. CI gate (waits for GitHub Actions)
+6. Verification (GitHub, npm, PyPI)
+7. Local installation update
 
-- Updates ALL version files (CLI, plugin, MCP server, docs) in one command
-- Validates semantic versioning format
-- Shows diff preview
-- Verifies all versions match after update
-- Creates standardized commit message
+**For quick local-only version bumps** (no full release):
+
+```bash
+./scripts/update-versions.sh 0.47.0
+```
 
 **User will typically say:**
 
-- "Bump to 0.9.3"
-- "Update version to 1.0.0"
-- "Rev the project to 0.9.4"
-- "Increment the version"
+- "Cut a release to 0.47.0"
+- "Bump to 0.47.0"
+- "Release the project"
 
 **You should:**
 
-1. Run `./scripts/bump-version.sh <version> --commit`
-2. Push to GitHub
-3. Confirm all versions updated correctly
+1. Use `bd mol wisp beads-release --var version=X.Y.Z`
+2. Follow each step in the formula
+3. The formula handles commit, tag, push, and verification
 
-**Files updated automatically:**
+**Files updated by the formula:**
 
 - `cmd/bd/version.go` - CLI version
-- `claude-plugin/.claude-plugin/plugin.json` - Plugin version
+- `.claude-plugin/plugin.json` - Plugin version
 - `.claude-plugin/marketplace.json` - Marketplace version
 - `integrations/beads-mcp/pyproject.toml` - MCP server version
+- `npm-package/package.json` - npm package version
 - `README.md` - Documentation version
-- `PLUGIN.md` - Version requirements
+- Hook templates version comments
 
-**Why this matters:** We had version mismatches (bd-66) when only `version.go` was updated. This script prevents that by updating all components atomically.
+**Why formulas?** The formula provides:
+- Guided step-by-step workflow with handoffs
+- CI gate that waits for GitHub Actions
+- Proper verification of published artifacts
+- Durability across session boundaries
 
-See `scripts/README.md` for more details.
-
-## Release Process (Maintainers)
-
-**Automated (Recommended):**
-
-```bash
-# One command to do everything (version bump, tests, tag, Homebrew update, local install)
-./scripts/release.sh 0.9.3
-```
-
-This handles the entire release workflow automatically, including waiting ~5 minutes for GitHub Actions to build release artifacts. See [scripts/README.md](scripts/README.md) for details.
-
-**Manual (Step-by-Step):**
-
-1. Bump version: `./scripts/bump-version.sh <version> --commit`
-2. Update CHANGELOG.md with release notes
-3. Run tests: `go test -short ./...` (CI runs full suite)
-4. Push version bump: `git push origin main`
-5. Tag release: `git tag v<version> && git push origin v<version>`
-6. Update Homebrew: `./scripts/update-homebrew.sh <version>` (waits for GitHub Actions)
-7. Verify: `brew update && brew upgrade bd && bd version`
-
-See [docs/RELEASING.md](docs/RELEASING.md) for complete manual instructions.
+See `.beads/formulas/beads-release.formula.toml` for the full workflow.
 
 ## Checking GitHub Issues and PRs
 
