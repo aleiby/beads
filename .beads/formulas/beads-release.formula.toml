@@ -672,6 +672,20 @@ Option 2 - Install script:
 curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
 ```
 
+Option 3 - Build from source (for developers releasing from this clone):
+```bash
+# Build the binary
+go build -o bd ./cmd/bd
+
+# Install to local bin
+mkdir -p ~/.local/bin
+cp bd ~/.local/bin/bd
+
+# macOS ONLY: Codesign to prevent SIGKILL (Killed: 9)
+# Without this, macOS Gatekeeper kills unsigned binaries from unknown developers
+[[ $(uname) == "Darwin" ]] && codesign --force --sign - ~/.local/bin/bd
+```
+
 Verify:
 ```bash
 bd --version
