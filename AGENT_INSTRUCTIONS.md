@@ -92,6 +92,37 @@ The 30-second debounce provides a **transaction window** for batch operations - 
 
 **Merge conflicts**: Rare with hash IDs. If conflicts occur, use `git checkout --theirs/.beads/issues.jsonl` and `bd import`. See [docs/GIT_INTEGRATION.md](docs/GIT_INTEGRATION.md).
 
+### Daemon Modes
+
+**Event-driven mode** (default since v0.21.0) provides instant sync reactivity (<500ms vs ~5000ms polling).
+
+**Environment variable:**
+```bash
+# Event-driven mode (default) - instant reactivity via fsnotify
+export BEADS_DAEMON_MODE=events
+
+# Polling mode - 5-second intervals, fallback for edge cases
+export BEADS_DAEMON_MODE=poll
+```
+
+**When to use polling mode:**
+- Network filesystems (NFS, SMB) where fsnotify is unreliable
+- Container environments without fsnotify support
+- WSL or virtualization with reduced fsnotify reliability
+
+**Watcher failure troubleshooting:**
+
+If the file watcher fails to start, the daemon automatically falls back to polling mode. Check logs for details:
+```bash
+bd daemons logs . -n 100
+```
+
+Common issues:
+- `Resource limit exceeded` - Increase file descriptor limit: `ulimit -n 4096`
+- `File watcher unavailable` - Network filesystem or container, use `BEADS_DAEMON_MODE=poll`
+
+See [docs/DAEMON.md](docs/DAEMON.md) for complete daemon documentation.
+
 ## Landing the Plane
 
 **When the user says "let's land the plane"**, you MUST complete ALL steps below. The plane is NOT landed until `git push` succeeds. NEVER stop before pushing. NEVER say "ready to push when you are!" - that is a FAILURE.
