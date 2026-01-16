@@ -332,7 +332,8 @@ func TestHasClaudeHooksProjectLevel(t *testing.T) {
 		})
 	}
 
-	// Test negative cases
+	// Test negative cases - use hasBeadsHooks directly to test project-level behavior
+	// without interference from global settings
 	t.Run("no hooks section", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
@@ -341,11 +342,12 @@ func TestHasClaudeHooksProjectLevel(t *testing.T) {
 			t.Fatal(err)
 		}
 		content := `{"enabledPlugins":{}}`
-		if err := os.WriteFile(filepath.Join(".claude", "settings.json"), []byte(content), 0o644); err != nil {
+		settingsPath := filepath.Join(".claude", "settings.json")
+		if err := os.WriteFile(settingsPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
-		if hasClaudeHooks() {
+		if hasBeadsHooks(settingsPath) {
 			t.Error("expected NOT to detect hooks when hooks section missing")
 		}
 	})
@@ -364,11 +366,12 @@ func TestHasClaudeHooksProjectLevel(t *testing.T) {
 				]
 			}
 		}`
-		if err := os.WriteFile(filepath.Join(".claude", "settings.json"), []byte(content), 0o644); err != nil {
+		settingsPath := filepath.Join(".claude", "settings.json")
+		if err := os.WriteFile(settingsPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
-		if hasClaudeHooks() {
+		if hasBeadsHooks(settingsPath) {
 			t.Error("expected NOT to detect hooks when bd prime not present")
 		}
 	})
