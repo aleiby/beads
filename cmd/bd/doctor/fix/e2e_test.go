@@ -7,8 +7,24 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 )
+
+// isWSL returns true if running under Windows Subsystem for Linux.
+// WSL may bypass file permission checks in some cases.
+func isWSL() bool {
+	var uname syscall.Utsname
+	if err := syscall.Uname(&uname); err != nil {
+		return false
+	}
+	release := make([]byte, len(uname.Release))
+	for i, b := range uname.Release {
+		release[i] = byte(b)
+	}
+	return strings.Contains(strings.ToLower(string(release)), "microsoft") ||
+		strings.Contains(strings.ToLower(string(release)), "wsl")
+}
 
 // skipIfTestBinary skips the test if running as a test binary.
 // E2E tests that need to execute 'bd' subcommands cannot run in test mode.
@@ -757,6 +773,10 @@ func TestMergeDriverWithLockedConfig_E2E(t *testing.T) {
 		// that bypass file permission checks
 		if os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true" {
 			t.Skip("skipping in CI: container may bypass file permission checks")
+		}
+		// Skip on WSL - Windows Subsystem for Linux may bypass permission checks
+		if isWSL() {
+			t.Skip("skipping on WSL: may bypass file permission checks")
 		}
 
 		dir := setupTestGitRepo(t)
