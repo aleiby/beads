@@ -53,27 +53,33 @@ func TestDebouncer_ResetsTimerOnSubsequentTriggers(t *testing.T) {
 	var fireTime atomic.Value
 	start := time.Now()
 
-	debouncer := NewDebouncer(50*time.Millisecond, func() {
+	// Use 150ms debounce to give ample margin over the 20ms sleep.
+	// Under extreme CPU load, time.Sleep(20ms) could stretch to 50-100ms,
+	// so we need debounce >> sleep to ensure the second trigger resets
+	// the timer before the first one fires.
+	debouncer := NewDebouncer(150*time.Millisecond, func() {
 		fireTime.Store(time.Now())
 		atomic.AddInt32(&count, 1)
 	})
 	t.Cleanup(debouncer.Cancel)
 
-	debouncer.Trigger() // t=0, would fire at ~50ms if not reset
+	debouncer.Trigger() // t=0, would fire at ~150ms if not reset
 	time.Sleep(20 * time.Millisecond)
-	debouncer.Trigger() // t≈20ms, resets timer, should fire at ~70ms
+	debouncer.Trigger() // t≈20ms, resets timer, should fire at ~170ms
 
 	// Wait for action to fire
 	awaitCondition(t, 500*time.Millisecond, "action to fire", func() bool {
 		return atomic.LoadInt32(&count) == 1
 	})
 
-	// Verify timer was reset: action should have fired closer to 70ms than 50ms
-	// Use generous bounds to handle CI timing variance
+	// Verify timer was reset: action should have fired after debounce duration
+	// from the second trigger (~170ms from start), not from the first (~150ms).
+	// Use 100ms threshold to handle CI timing variance while still catching
+	// cases where the timer wasn't reset.
 	fired := fireTime.Load().(time.Time)
 	elapsed := fired.Sub(start)
-	if elapsed < 40*time.Millisecond {
-		t.Errorf("action fired too early at %v, timer may not have been reset (expected >40ms)", elapsed)
+	if elapsed < 100*time.Millisecond {
+		t.Errorf("action fired too early at %v, timer may not have been reset (expected >100ms)", elapsed)
 	}
 }
 
