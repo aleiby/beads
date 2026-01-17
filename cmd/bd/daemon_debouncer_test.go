@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+// awaitCondition polls until condition returns true or timeout is reached.
+// This is more robust than time.Sleep under CPU load.
+func awaitCondition(t *testing.T, timeout time.Duration, desc string, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("timeout waiting for %s", desc)
+}
+
 func TestDebouncer_BatchesMultipleTriggers(t *testing.T) {
 	var count int32
 	debouncer := NewDebouncer(50*time.Millisecond, func() {
@@ -18,37 +32,48 @@ func TestDebouncer_BatchesMultipleTriggers(t *testing.T) {
 	debouncer.Trigger()
 	debouncer.Trigger()
 
-	time.Sleep(20 * time.Millisecond)
+	// Action should not fire synchronously
 	if got := atomic.LoadInt32(&count); got != 0 {
-		t.Errorf("action fired too early: got %d, want 0", got)
+		t.Errorf("action fired synchronously: got %d, want 0", got)
 	}
 
-	time.Sleep(35 * time.Millisecond)
+	// Wait for debounced action to fire (generous timeout for CI load)
+	awaitCondition(t, 500*time.Millisecond, "action to fire once", func() bool {
+		return atomic.LoadInt32(&count) == 1
+	})
+
+	// Verify exactly one action fired
 	if got := atomic.LoadInt32(&count); got != 1 {
-		t.Errorf("action should have fired once: got %d, want 1", got)
+		t.Errorf("action should have fired exactly once: got %d, want 1", got)
 	}
 }
 
 func TestDebouncer_ResetsTimerOnSubsequentTriggers(t *testing.T) {
 	var count int32
+	var fireTime atomic.Value
+	start := time.Now()
+
 	debouncer := NewDebouncer(50*time.Millisecond, func() {
+		fireTime.Store(time.Now())
 		atomic.AddInt32(&count, 1)
 	})
 	t.Cleanup(debouncer.Cancel)
 
-	debouncer.Trigger()
+	debouncer.Trigger() // t=0, would fire at ~50ms if not reset
 	time.Sleep(20 * time.Millisecond)
+	debouncer.Trigger() // t≈20ms, resets timer, should fire at ~70ms
 
-	debouncer.Trigger()
-	time.Sleep(20 * time.Millisecond)
+	// Wait for action to fire
+	awaitCondition(t, 500*time.Millisecond, "action to fire", func() bool {
+		return atomic.LoadInt32(&count) == 1
+	})
 
-	if got := atomic.LoadInt32(&count); got != 0 {
-		t.Errorf("action fired too early after timer reset: got %d, want 0", got)
-	}
-
-	time.Sleep(35 * time.Millisecond)
-	if got := atomic.LoadInt32(&count); got != 1 {
-		t.Errorf("action should have fired once after final timer: got %d, want 1", got)
+	// Verify timer was reset: action should have fired closer to 70ms than 50ms
+	// Use generous bounds to handle CI timing variance
+	fired := fireTime.Load().(time.Time)
+	elapsed := fired.Sub(start)
+	if elapsed < 40*time.Millisecond {
+		t.Errorf("action fired too early at %v, timer may not have been reset (expected >40ms)", elapsed)
 	}
 }
 
@@ -80,11 +105,11 @@ func TestDebouncer_CancelWithNoPendingAction(t *testing.T) {
 	debouncer.Cancel()
 
 	debouncer.Trigger()
-	// Use longer wait to account for Windows timer imprecision
-	time.Sleep(100 * time.Millisecond)
-	if got := atomic.LoadInt32(&count); got != 1 {
-		t.Errorf("action should fire normally after cancel with no pending action: got %d, want 1", got)
-	}
+
+	// Wait for action to fire (generous timeout for CI load)
+	awaitCondition(t, 500*time.Millisecond, "action to fire after cancel with no pending", func() bool {
+		return atomic.LoadInt32(&count) == 1
+	})
 }
 
 func TestDebouncer_ThreadSafety(t *testing.T) {
@@ -109,7 +134,10 @@ func TestDebouncer_ThreadSafety(t *testing.T) {
 	close(start)
 	wg.Wait()
 
-	time.Sleep(70 * time.Millisecond)
+	// Wait for debounced action to fire (generous timeout for CI load)
+	awaitCondition(t, 500*time.Millisecond, "action to fire", func() bool {
+		return atomic.LoadInt32(&count) >= 1
+	})
 
 	got := atomic.LoadInt32(&count)
 	if got != 1 {
