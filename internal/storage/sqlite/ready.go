@@ -15,6 +15,7 @@ import (
 // By default, shows both 'open' and 'in_progress' issues so epics/tasks
 // ready to close are visible.
 // Excludes pinned issues which are persistent anchors, not actionable work.
+// Excludes foreign-prefix issues to prevent stale cross-workspace data (GH#da-cgbi).
 func (s *SQLiteStorage) GetReadyWork(ctx context.Context, filter types.WorkFilter) ([]*types.Issue, error) {
 	whereClauses := []string{
 		"i.pinned = 0",                             // Exclude pinned issues
@@ -22,6 +23,15 @@ func (s *SQLiteStorage) GetReadyWork(ctx context.Context, filter types.WorkFilte
 		"i.id NOT LIKE '%-wisp-%'",                 // Defense in depth: exclude wisp IDs even if ephemeral flag missing
 	}
 	args := []interface{}{}
+
+	// GH#da-cgbi: Filter to local-prefix issues only
+	// Foreign-prefix issues (from other workspaces) can have stale status that diverges
+	// from their authoritative workspace. Only show issues belonging to this workspace.
+	localPrefix, _ := s.GetConfig(ctx, "issue_prefix")
+	if localPrefix != "" {
+		whereClauses = append(whereClauses, "i.id LIKE ?")
+		args = append(args, localPrefix+"-%")
+	}
 
 	// Default to open OR in_progress if not specified
 	if filter.Status == "" {
