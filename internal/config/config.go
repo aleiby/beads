@@ -489,6 +489,15 @@ func ResolveExternalProjectPath(projectName string) string {
 	return path
 }
 
+// ResetCaches clears the viper singleton and reinitializes configuration.
+// This is primarily used in tests when changing directories or creating
+// new config files mid-test.
+func ResetCaches() {
+	v = nil
+	// Re-initialize to pick up config from new CWD
+	_ = Initialize()
+}
+
 // GetIdentity resolves the user's identity for messaging.
 // Priority chain:
 //  1. flagValue (if non-empty, from --identity flag)

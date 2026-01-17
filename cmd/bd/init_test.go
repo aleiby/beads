@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/steveyegge/beads/internal/beads"
+	"github.com/steveyegge/beads/internal/config"
 	"github.com/steveyegge/beads/internal/git"
 )
 
@@ -486,6 +487,7 @@ func TestInitNoDbMode(t *testing.T) {
 	// Reset caches so RepoContext picks up new BEADS_DIR and CWD
 	beads.ResetCaches()
 	git.ResetCaches()
+	config.ResetCaches()
 	defer func() {
 		if origBeadsDir != "" {
 			os.Setenv("BEADS_DIR", origBeadsDir)
@@ -495,6 +497,7 @@ func TestInitNoDbMode(t *testing.T) {
 		// Reset caches on cleanup too
 		beads.ResetCaches()
 		git.ResetCaches()
+		config.ResetCaches()
 	}()
 
 	// Initialize with --no-db flag
@@ -521,6 +524,30 @@ func TestInitNoDbMode(t *testing.T) {
 	if !strings.Contains(configStr, "no-db: true") {
 		t.Error("config.yaml should contain 'no-db: true' in --no-db mode")
 	}
+
+	// Reset config cache so subsequent command reads the newly created config.yaml
+	config.ResetCaches()
+
+	// Reset noDb to false to test if config override works
+	noDb = false
+
+	// Reset the --no-db flag's Changed state to simulate a fresh CLI invocation
+	// In production, each CLI call is a separate process with fresh flag state.
+	// In tests, we need to manually reset the Changed state so that
+	// cmd.Flags().Changed("no-db") returns false and config is loaded.
+	if flag := rootCmd.PersistentFlags().Lookup("no-db"); flag != nil {
+		flag.Changed = false
+	}
+
+	// Also reset other persistent flags that were set
+	for _, flagName := range []string{"no-daemon", "prefix", "quiet"} {
+		if flag := rootCmd.PersistentFlags().Lookup(flagName); flag != nil {
+			flag.Changed = false
+		}
+	}
+
+	// Reset the store to nil to ensure fresh initialization
+	store = nil
 
 	// Verify subsequent command works without --no-db flag
 	rootCmd.SetArgs([]string{"create", "test issue", "--json"})

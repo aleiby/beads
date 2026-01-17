@@ -305,40 +305,43 @@ var createCmd = &cobra.Command{
 		// Use global jsonOutput set by PersistentPreRun
 
 		// Determine target repository using routing logic
+		// Skip routing in no-db mode - use the memory store set up by PersistentPreRun
 		repoPath := "." // default to current directory
-		if cmd.Flags().Changed("repo") {
-			// Explicit --repo flag overrides auto-routing
-			repoPath = repoOverride
-		} else {
-			// Auto-routing based on user role
-			userRole, err := routing.DetectUserRole(".")
-			if err != nil {
-				debug.Logf("Warning: failed to detect user role: %v\n", err)
-			}
-
-			// Build routing config with backward compatibility for legacy contributor.* keys
-			routingMode := config.GetString("routing.mode")
-			contributorRepo := config.GetString("routing.contributor")
-
-			// NFR-001: Backward compatibility - fall back to legacy contributor.* keys
-			if routingMode == "" {
-				if config.GetString("contributor.auto_route") == "true" {
-					routingMode = "auto"
+		if !noDb {
+			if cmd.Flags().Changed("repo") {
+				// Explicit --repo flag overrides auto-routing
+				repoPath = repoOverride
+			} else {
+				// Auto-routing based on user role
+				userRole, err := routing.DetectUserRole(".")
+				if err != nil {
+					debug.Logf("Warning: failed to detect user role: %v\n", err)
 				}
-			}
-			if contributorRepo == "" {
-				contributorRepo = config.GetString("contributor.planning_repo")
-			}
 
-			routingConfig := &routing.RoutingConfig{
-				Mode:             routingMode,
-				DefaultRepo:      config.GetString("routing.default"),
-				MaintainerRepo:   config.GetString("routing.maintainer"),
-				ContributorRepo:  contributorRepo,
-				ExplicitOverride: repoOverride,
-			}
+				// Build routing config with backward compatibility for legacy contributor.* keys
+				routingMode := config.GetString("routing.mode")
+				contributorRepo := config.GetString("routing.contributor")
 
-			repoPath = routing.DetermineTargetRepo(routingConfig, userRole, ".")
+				// NFR-001: Backward compatibility - fall back to legacy contributor.* keys
+				if routingMode == "" {
+					if config.GetString("contributor.auto_route") == "true" {
+						routingMode = "auto"
+					}
+				}
+				if contributorRepo == "" {
+					contributorRepo = config.GetString("contributor.planning_repo")
+				}
+
+				routingConfig := &routing.RoutingConfig{
+					Mode:             routingMode,
+					DefaultRepo:      config.GetString("routing.default"),
+					MaintainerRepo:   config.GetString("routing.maintainer"),
+					ContributorRepo:  contributorRepo,
+					ExplicitOverride: repoOverride,
+				}
+
+				repoPath = routing.DetermineTargetRepo(routingConfig, userRole, ".")
+			}
 		}
 
 		// Switch to target repo for multi-repo support (bd-6x6g)
