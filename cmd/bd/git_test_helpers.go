@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/steveyegge/beads/internal/git"
@@ -26,4 +27,22 @@ func runInDir(t *testing.T, dir string, fn func()) {
 		git.ResetCaches()
 	}()
 	fn()
+}
+
+// runInGitRepo creates a temp dir, initializes git, and runs fn in that directory.
+// This eliminates redundant git init calls across tests that need a minimal git repo.
+// The git repo has no commits - use setupGitRepo() if you need an initial commit.
+func runInGitRepo(t *testing.T, fn func()) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	runInDir(t, tmpDir, func() {
+		if err := exec.Command("git", "init", "--initial-branch=main").Run(); err != nil {
+			t.Skipf("Skipping test: git init failed: %v", err)
+		}
+		// Configure git for tests that may need commits
+		_ = exec.Command("git", "config", "user.email", "test@test.com").Run()
+		_ = exec.Command("git", "config", "user.name", "Test User").Run()
+		git.ResetCaches()
+		fn()
+	})
 }

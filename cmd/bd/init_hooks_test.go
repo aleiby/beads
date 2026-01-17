@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,12 +10,7 @@ import (
 )
 
 func TestDetectExistingHooks(t *testing.T) {
-	tmpDir := t.TempDir()
-	runInDir(t, tmpDir, func() {
-		if err := exec.Command("git", "init").Run(); err != nil {
-			t.Skipf("Skipping test: git init failed: %v", err)
-		}
-
+	runInGitRepo(t, func() {
 		gitDirPath, err := git.GetGitDir()
 		if err != nil {
 			t.Fatalf("git.GetGitDir() failed: %v", err)
@@ -99,12 +93,7 @@ func TestDetectExistingHooks(t *testing.T) {
 }
 
 func TestInstallGitHooks_NoExistingHooks(t *testing.T) {
-	tmpDir := t.TempDir()
-	runInDir(t, tmpDir, func() {
-		if err := exec.Command("git", "init").Run(); err != nil {
-			t.Skipf("Skipping test: git init failed: %v", err)
-		}
-
+	runInGitRepo(t, func() {
 		gitDirPath, err := git.GetGitDir()
 		if err != nil {
 			t.Fatalf("git.GetGitDir() failed: %v", err)
@@ -139,12 +128,7 @@ func TestInstallGitHooks_NoExistingHooks(t *testing.T) {
 }
 
 func TestInstallGitHooks_ExistingHookBackup(t *testing.T) {
-	tmpDir := t.TempDir()
-	runInDir(t, tmpDir, func() {
-		if err := exec.Command("git", "init").Run(); err != nil {
-			t.Skipf("Skipping test: git init failed: %v", err)
-		}
-
+	runInGitRepo(t, func() {
 		gitDirPath, err := git.GetGitDir()
 		if err != nil {
 			t.Fatalf("git.GetGitDir() failed: %v", err)
