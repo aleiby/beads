@@ -333,9 +333,11 @@ func TestHasClaudeHooksProjectLevel(t *testing.T) {
 	}
 
 	// Test negative cases
+	// NOTE: We set HOME to tmpDir to isolate from user's global settings
 	t.Run("no hooks section", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
+		t.Setenv("HOME", tmpDir) // Isolate from user's global settings
 
 		if err := os.MkdirAll(".claude", 0o755); err != nil {
 			t.Fatal(err)
@@ -353,6 +355,7 @@ func TestHasClaudeHooksProjectLevel(t *testing.T) {
 	t.Run("hooks but not bd prime", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
+		t.Setenv("HOME", tmpDir) // Isolate from user's global settings
 
 		if err := os.MkdirAll(".claude", 0o755); err != nil {
 			t.Fatal(err)

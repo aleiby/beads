@@ -1076,7 +1076,7 @@ func TestSyncConfigDefaults(t *testing.T) {
 
 	// Test sync config defaults
 	cfg := GetSyncConfig()
-	if cfg.Mode != SyncModeGitPortable {
+	if cfg.Mode != string(SyncModeGitPortable) {
 		t.Errorf("GetSyncConfig().Mode = %q, want %q", cfg.Mode, SyncModeGitPortable)
 	}
 	if cfg.ExportOn != SyncTriggerPush {
@@ -1104,7 +1104,7 @@ func TestConflictConfigDefaults(t *testing.T) {
 
 	// Test conflict config
 	cfg := GetConflictConfig()
-	if cfg.Strategy != ConflictStrategyNewest {
+	if cfg.Strategy != string(ConflictStrategyNewest) {
 		t.Errorf("GetConflictConfig().Strategy = %q, want %q", cfg.Strategy, ConflictStrategyNewest)
 	}
 }
@@ -1119,13 +1119,14 @@ func TestFederationConfigDefaults(t *testing.T) {
 		t.Fatalf("Initialize() returned error: %v", err)
 	}
 
-	// Test federation config defaults (empty)
+	// Test federation config defaults
+	// Note: Sovereignty defaults to T1 (most restrictive) when not configured
 	cfg := GetFederationConfig()
 	if cfg.Remote != "" {
 		t.Errorf("GetFederationConfig().Remote = %q, want empty", cfg.Remote)
 	}
-	if cfg.Sovereignty != "" {
-		t.Errorf("GetFederationConfig().Sovereignty = %q, want empty", cfg.Sovereignty)
+	if cfg.Sovereignty != string(SovereigntyT1) {
+		t.Errorf("GetFederationConfig().Sovereignty = %q, want %q (default)", cfg.Sovereignty, SovereigntyT1)
 	}
 }
 
@@ -1134,10 +1135,10 @@ func TestIsSyncModeValid(t *testing.T) {
 		mode  string
 		valid bool
 	}{
-		{SyncModeGitPortable, true},
-		{SyncModeRealtime, true},
-		{SyncModeDoltNative, true},
-		{SyncModeBeltAndSuspenders, true},
+		{string(SyncModeGitPortable), true},
+		{string(SyncModeRealtime), true},
+		{string(SyncModeDoltNative), true},
+		{string(SyncModeBeltAndSuspenders), true},
 		{"invalid-mode", false},
 		{"", false},
 	}
@@ -1156,10 +1157,10 @@ func TestIsConflictStrategyValid(t *testing.T) {
 		strategy string
 		valid    bool
 	}{
-		{ConflictStrategyNewest, true},
-		{ConflictStrategyOurs, true},
-		{ConflictStrategyTheirs, true},
-		{ConflictStrategyManual, true},
+		{string(ConflictStrategyNewest), true},
+		{string(ConflictStrategyOurs), true},
+		{string(ConflictStrategyTheirs), true},
+		{string(ConflictStrategyManual), true},
 		{"invalid-strategy", false},
 		{"", false},
 	}
@@ -1178,10 +1179,10 @@ func TestIsSovereigntyValid(t *testing.T) {
 		sovereignty string
 		valid       bool
 	}{
-		{SovereigntyT1, true},
-		{SovereigntyT2, true},
-		{SovereigntyT3, true},
-		{SovereigntyT4, true},
+		{string(SovereigntyT1), true},
+		{string(SovereigntyT2), true},
+		{string(SovereigntyT3), true},
+		{string(SovereigntyT4), true},
 		{"", true}, // Empty is valid (means no restriction)
 		{"T5", false},
 		{"invalid", false},
@@ -1234,7 +1235,7 @@ federation:
 
 	// Test sync config
 	syncCfg := GetSyncConfig()
-	if syncCfg.Mode != SyncModeRealtime {
+	if syncCfg.Mode != string(SyncModeRealtime) {
 		t.Errorf("GetSyncConfig().Mode = %q, want %q", syncCfg.Mode, SyncModeRealtime)
 	}
 	if syncCfg.ExportOn != SyncTriggerChange {
@@ -1246,7 +1247,7 @@ federation:
 
 	// Test conflict config
 	conflictCfg := GetConflictConfig()
-	if conflictCfg.Strategy != ConflictStrategyOurs {
+	if conflictCfg.Strategy != string(ConflictStrategyOurs) {
 		t.Errorf("GetConflictConfig().Strategy = %q, want %q", conflictCfg.Strategy, ConflictStrategyOurs)
 	}
 
@@ -1255,7 +1256,7 @@ federation:
 	if fedCfg.Remote != "dolthub://myorg/beads" {
 		t.Errorf("GetFederationConfig().Remote = %q, want \"dolthub://myorg/beads\"", fedCfg.Remote)
 	}
-	if fedCfg.Sovereignty != SovereigntyT2 {
+	if fedCfg.Sovereignty != string(SovereigntyT2) {
 		t.Errorf("GetFederationConfig().Sovereignty = %q, want %q", fedCfg.Sovereignty, SovereigntyT2)
 	}
 }
@@ -1313,10 +1314,10 @@ func TestNeedsDoltRemote(t *testing.T) {
 		mode        string
 		needsRemote bool
 	}{
-		{SyncModeGitPortable, false},
-		{SyncModeRealtime, false},
-		{SyncModeDoltNative, true},
-		{SyncModeBeltAndSuspenders, true},
+		{string(SyncModeGitPortable), false},
+		{string(SyncModeRealtime), false},
+		{string(SyncModeDoltNative), true},
+		{string(SyncModeBeltAndSuspenders), true},
 	}
 
 	for _, tt := range tests {
@@ -1342,10 +1343,10 @@ func TestNeedsJSONL(t *testing.T) {
 		mode       string
 		needsJSONL bool
 	}{
-		{SyncModeGitPortable, true},
-		{SyncModeRealtime, true},
-		{SyncModeDoltNative, false},
-		{SyncModeBeltAndSuspenders, true},
+		{string(SyncModeGitPortable), true},
+		{string(SyncModeRealtime), true},
+		{string(SyncModeDoltNative), false},
+		{string(SyncModeBeltAndSuspenders), true},
 	}
 
 	for _, tt := range tests {
@@ -1406,9 +1407,9 @@ func TestGetSovereigntyInvalid(t *testing.T) {
 		t.Fatalf("Initialize() returned error: %v", err)
 	}
 
-	// Set invalid sovereignty - should return empty
+	// Set invalid sovereignty - should return default T1 (with warning)
 	Set("federation.sovereignty", "T99")
-	if got := GetSovereignty(); got != "" {
-		t.Errorf("GetSovereignty() with invalid tier = %q, want empty (fallback)", got)
+	if got := GetSovereignty(); got != SovereigntyT1 {
+		t.Errorf("GetSovereignty() with invalid tier = %q, want %q (default fallback)", got, SovereigntyT1)
 	}
 }
