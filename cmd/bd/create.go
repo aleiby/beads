@@ -345,6 +345,7 @@ var createCmd = &cobra.Command{
 		// Switch to target repo for multi-repo support (bd-6x6g)
 		// When routing to a different repo, we bypass daemon mode and use direct storage
 		var targetStore storage.Storage
+		var originalStore storage.Storage // Save original store to restore after routing
 		if repoPath != "." {
 			targetBeadsDir := routing.ExpandPath(repoPath)
 			debug.Logf("DEBUG: Routing to target repo: %s\n", targetBeadsDir)
@@ -361,7 +362,14 @@ var createCmd = &cobra.Command{
 			if err != nil {
 				FatalError("failed to open target store: %v", err)
 			}
+			// Save original store and set up deferred cleanup
+			// We restore the original store before closing targetStore to prevent
+			// PersistentPostRun from trying to use a closed store (GH#h5hfm)
+			originalStore = store
 			defer func() {
+				// Restore original store before closing target
+				// This ensures PersistentPostRun's flush uses the correct (open) store
+				store = originalStore
 				if err := targetStore.Close(); err != nil {
 					fmt.Fprintf(os.Stderr, "warning: failed to close target store: %v\n", err)
 				}
