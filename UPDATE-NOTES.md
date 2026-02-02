@@ -21,7 +21,7 @@ Building requires CGO for Dolt support:
 sudo apt-get install -y gcc g++ libzstd-dev libicu-dev
 
 # Build and install (ldflags set version info)
-VERSION=$(git describe --tags --always --dirty) && \
+VERSION=$(git describe --tags --always --dirty | sed 's/^v//') && \
 COMMIT=$(git rev-parse --short HEAD) && \
 go install -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.Build=local" ./cmd/bd
 ```
