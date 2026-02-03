@@ -25,6 +25,13 @@ sudo apt-get install -y gcc g++ libzstd-dev libicu-dev
 VERSION=$(git describe --tags --always --dirty | sed 's/^v//') && \
 COMMIT=$(git rev-parse --short HEAD) && \
 go install -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.Build=local" ./cmd/bd
+
+# After pushing to origin/main, sync mayor/rig to avoid stale binary warnings:
+git -C ~/gt/beads/mayor/rig pull
 ```
 
 Note: Installs to ~/go/bin. Ensure ~/go/bin is in PATH.
+
+**Important:** Build only AFTER all commits (including UPDATE-NOTES.md updates) are pushed.
+The stale binary warning compares against ~/gt/beads/mayor/rig (origin/main). If you build
+before pushing, the binary will appear stale.
