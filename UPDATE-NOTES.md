@@ -11,6 +11,7 @@ upstream/main: v0.49.3 (754192f4)
 |----|---------|-------------|
 | #1431 | 16f3f377 | fix(dolt): work around merge join panic in ready_issues view |
 | #1436 | 61da49c9 | fix(dolt): remove FK constraint on depends_on_id for external refs |
+| #1454 | 0c3ebae4 | feat(config): support .beads/config.local.yaml for local overrides |
 
 ## Build from Source
 
